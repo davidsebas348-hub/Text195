@@ -1,12 +1,20 @@
 -- Loadstring seguro para teleportar a Lobby
 
--- Esperar a que el juego cargue
+-- Esperar a que el juego cargue completamente
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
+task.wait(2) -- espera extra para scripts pesados u OP_SCRIPT
+
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
+-- Esperar a que LocalPlayer exista
+local player
+repeat
+    player = Players.LocalPlayer
+    task.wait()
+until player
 
 -- Posición exacta para teleport
 local lobbyTeleportPosition = Vector3.new(39, 4, 181)
@@ -17,10 +25,18 @@ local function teleportIfLobby()
     if not canTeleport then return end
     if player.Team and player.Team.Name == "Lobby" then
         canTeleport = false
-        task.delay(7, function() -- Esperar 7 segundos antes del teleport
+        task.spawn(function()
+            task.wait(7) -- esperar 7 segundos antes de teleport
             local character = player.Character
             if character then
-                local hrp = character:WaitForChild("HumanoidRootPart", 5) -- Espera max 5s
+                -- Esperar que HumanoidRootPart exista (máx 10 segundos)
+                local hrp
+                local tries = 0
+                repeat
+                    hrp = character:FindFirstChild("HumanoidRootPart")
+                    tries += 1
+                    task.wait(0.2)
+                until hrp or tries >= 50
                 if hrp then
                     hrp.CFrame = CFrame.new(lobbyTeleportPosition)
                 end
@@ -43,5 +59,5 @@ player:GetPropertyChangedSignal("Team"):Connect(teleportIfLobby)
 
 -- Ejecutar al inicio si ya hay character
 if player.Character then
-    onCharacterAdded(player.Character)
+    teleportIfLobby()
 end
